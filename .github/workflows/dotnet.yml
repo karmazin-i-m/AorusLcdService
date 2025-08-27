@@ -49,11 +49,14 @@ jobs:
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts  # Завантажуємо всі артефакти в одну директорію 'artifacts'
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          build-linux-x64/build-linux-x64.tar.gz
-          build-win-x64/build-win-x64.zip
+          ./artifacts/build-linux-x64/build-linux-x64.tar.gz
+          ./artifacts/build-win-x64/build-win-x64.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
