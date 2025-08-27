@@ -1,4 +1,5 @@
-﻿using AorusLcdServiceLinux.Abstract;
+﻿using System.Runtime.InteropServices;
+using AorusLcdServiceLinux.Abstract;
 using AorusLcdServiceLinux.API;
 using AorusLcdServiceLinux.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,13 +12,19 @@ namespace AorusLcdService
         private static async Task Main(string[] args)
         {
             IHost host = Host.CreateDefaultBuilder(args)
+                        .UseSystemd()
                         .UseWindowsService(options =>
                         {
                             options.ServiceName = "AorusLcdService";
                         })
                         .ConfigureServices(services =>
                         {
-                            services.AddSingleton<ICpuApi, CpuWinApi>();
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                                services.AddSingleton<ICpuApi, CpuWinApi>();
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                                services.AddSingleton<ICpuApi, CpuLinApi>();
+                            else
+                                throw new PlatformNotSupportedException();
 
                             services.AddHostedService<CoolerDataSenderService>();
                         })
