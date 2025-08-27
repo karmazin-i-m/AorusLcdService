@@ -28,16 +28,14 @@ jobs:
       run: dotnet restore
     - name: Publish
       run: dotnet publish AorusLcdServiceLinux.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -o ./publish/${{ matrix.rid }}
-    - name: Archive build
-      run: |
-        # Для Linux, створити .tar.gz архів
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          tar -czvf "build-${{ matrix.rid }}.tar.gz" -C "./publish/${{ matrix.rid }}" .
-        # Для Windows, створити .zip архів
-        else
-          Compress-Archive -Path "./publish/${{ matrix.rid }}/*" -DestinationPath "build-${{ matrix.rid }}.zip"
-        fi
+    - name: Archive build on Linux
+      if: runner.os == 'Linux'
+      run: tar -czvf "build-${{ matrix.rid }}.tar.gz" -C "./publish/${{ matrix.rid }}" .
       shell: bash
+    - name: Archive build on Windows
+      if: runner.os == 'Windows'
+      run: Compress-Archive -Path "./publish/${{ matrix.rid }}/*" -DestinationPath "build-${{ matrix.rid }}.zip"
+      shell: pwsh
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
