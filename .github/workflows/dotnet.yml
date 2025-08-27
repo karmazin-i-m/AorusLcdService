@@ -3,7 +3,7 @@ name: Build & Release .NET
 on:
   push:
     tags:
-      - 'v*.*.*'   # Запускається тільки коли пушиш тег, наприклад v1.0.0
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -11,7 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         include:
@@ -19,40 +18,44 @@ jobs:
             rid: linux-x64
           - os: windows-latest
             rid: win-x64
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-
     - name: Restore dependencies
       run: dotnet restore
-
     - name: Publish
       run: dotnet publish -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
-
+    - name: Archive build
+      run: |
+        # Для Linux, створити .tar.gz архів
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          tar -czvf "build-${{ matrix.rid }}.tar.gz" -C "./publish/${{ matrix.rid }}" .
+        # Для Windows, створити .zip архів
+        else
+          Compress-Archive -Path "./publish/${{ matrix.rid }}/*" -DestinationPath "build-${{ matrix.rid }}.zip"
+        fi
+      shell: bash
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: build-${{ matrix.rid }}
-        path: ./publish/${{ matrix.rid }}
-
+        path: "build-${{ matrix.rid }}.*" # Завантажити створений архів
+        retention-days: 1
+  
   release:
     runs-on: ubuntu-latest
     needs: build
-
     steps:
-    - name: Download artifacts
+    - name: Download all artifacts
       uses: actions/download-artifact@v4
-      with:
-        path: ./publish
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        files: ./publish/**/*
+        files: |
+          build-linux-x64/build-linux-x64.tar.gz
+          build-win-x64/build-win-x64.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
